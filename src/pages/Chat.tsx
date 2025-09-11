@@ -152,41 +152,50 @@ const Chat = () => {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="h-16 border-b border-border px-4 flex items-center justify-between bg-card/50 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden"
-            >
-              <Menu size={20} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/")}
-              className="hidden md:flex"
-            >
-              <ArrowLeft size={20} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="hidden md:flex"
-            >
-              <Menu size={20} />
-            </Button>
-            <Logo size="sm" />
-            {activeFile !== null && uploadedFiles[activeFile] && (
-              <div className="hidden md:flex items-center gap-2 ml-4 px-3 py-1 bg-primary/10 rounded-full">
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                <span className="text-sm font-medium text-primary">
-                  {uploadedFiles[activeFile].name}
-                </span>
-              </div>
-            )}
+        <header className="h-16 border-b border-border flex items-center bg-card/50 backdrop-blur-sm">
+          {/* Desktop sidebar toggle - aligned with sidebar edge */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="hidden md:flex ml-2 mr-3"
+          >
+            <Menu size={20} />
+          </Button>
+          
+          {/* Main header content */}
+          <div className="flex-1 px-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Mobile menu button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="md:hidden"
+              >
+                <Menu size={20} />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/")}
+                className="hidden md:flex"
+              >
+                <ArrowLeft size={20} />
+              </Button>
+              
+              <Logo size="sm" />
+              
+              {activeFile !== null && uploadedFiles[activeFile] && (
+                <div className="hidden md:flex items-center gap-2 ml-4 px-3 py-1 bg-primary/10 rounded-full">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                  <span className="text-sm font-medium text-primary">
+                    {uploadedFiles[activeFile].name}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
