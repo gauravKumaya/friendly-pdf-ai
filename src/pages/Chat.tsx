@@ -170,6 +170,14 @@ const Chat = () => {
             >
               <ArrowLeft size={20} />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="hidden md:flex"
+            >
+              <Menu size={20} />
+            </Button>
             <Logo size="sm" />
             {activeFile !== null && uploadedFiles[activeFile] && (
               <div className="hidden md:flex items-center gap-2 ml-4 px-3 py-1 bg-primary/10 rounded-full">
@@ -180,15 +188,6 @@ const Chat = () => {
               </div>
             )}
           </div>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="hidden md:flex"
-          >
-            <Menu size={20} />
-          </Button>
         </header>
 
         {/* Messages Area */}
