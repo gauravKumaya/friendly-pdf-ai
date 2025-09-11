@@ -157,7 +157,8 @@ All colors MUST be HSL.
 @layer components {
   /* Hero button variant */
   .btn-hero {
-    @apply bg-gradient-to-r from-primary to-primary-hover text-primary-foreground px-8 py-3 rounded-lg font-semibold shadow-lg hover:shadow-glow transition-all duration-300 hover:scale-105;
+    @apply text-primary-foreground px-8 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg;
+    background-image: var(--gradient-hero);
   }
   
   /* Upload area styles */
