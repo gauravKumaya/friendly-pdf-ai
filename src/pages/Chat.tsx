@@ -16,17 +16,17 @@ interface Message {
   timestamp: Date;
 }
 
+interface ChatSession {
+  fileId: string;
+  messages: Message[];
+}
+
 const Chat = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "Hello! I'm DocuMate, your AI assistant. I'm ready to help you analyze and understand your PDF documents. Ask me anything about the uploaded files!",
-      role: "assistant",
-      timestamp: new Date(),
-    },
-  ]);
+  
+  // Store chat sessions for each PDF
+  const [chatSessions, setChatSessions] = useState<Map<string, Message[]>>(new Map());
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -34,6 +34,13 @@ const Chat = () => {
   const [activeFile, setActiveFile] = useState<number | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Helper to get current file's messages
+  const getCurrentMessages = (): Message[] => {
+    if (activeFile === null || !uploadedFiles[activeFile]) return [];
+    const fileId = uploadedFiles[activeFile].name;
+    return chatSessions.get(fileId) || [];
+  };
 
   useEffect(() => {
     // Load files from sessionStorage
@@ -45,6 +52,20 @@ const Chat = () => {
       setUploadedFiles(files);
       if (files.length > 0) {
         setActiveFile(0);
+        // Initialize first file's chat session
+        const fileId = files[0].name;
+        setChatSessions((prev) => {
+          const newSessions = new Map(prev);
+          if (!newSessions.has(fileId)) {
+            newSessions.set(fileId, [{
+              id: `welcome-${fileId}`,
+              content: `Hello! I'm ready to help you analyze "${fileId}". Ask me anything about this specific PDF document!`,
+              role: "assistant" as const,
+              timestamp: new Date(),
+            }]);
+          }
+          return newSessions;
+        });
       }
       sessionStorage.removeItem("uploadedFiles");
     }
@@ -58,11 +79,12 @@ const Chat = () => {
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
     }
-  }, [messages]);
+  }, [chatSessions, activeFile]);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
-
+    if (!inputValue.trim() || isLoading || activeFile === null) return;
+    
+    const fileId = uploadedFiles[activeFile].name;
     const userMessage: Message = {
       id: Date.now().toString(),
       content: inputValue,
@@ -70,7 +92,14 @@ const Chat = () => {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    // Add message to current file's chat session
+    setChatSessions((prev) => {
+      const newSessions = new Map(prev);
+      const currentMessages = newSessions.get(fileId) || [];
+      newSessions.set(fileId, [...currentMessages, userMessage]);
+      return newSessions;
+    });
+    
     setInputValue("");
     setIsLoading(true);
 
@@ -78,11 +107,18 @@ const Chat = () => {
     setTimeout(() => {
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `I've analyzed your question about "${inputValue}". Based on the PDF content, here's what I found...\n\nThis is a simulated response. In a real implementation, I would process your PDFs and provide relevant information from the documents.`,
+        content: `I've analyzed your question about "${inputValue}" in ${uploadedFiles[activeFile].name}. Based on this specific PDF's content, here's what I found...\n\nThis is a simulated response. In a real implementation, I would process this specific PDF and provide relevant information from it.`,
         role: "assistant",
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, aiMessage]);
+      
+      setChatSessions((prev) => {
+        const newSessions = new Map(prev);
+        const currentMessages = newSessions.get(fileId) || [];
+        newSessions.set(fileId, [...currentMessages, aiMessage]);
+        return newSessions;
+      });
+      
       setIsLoading(false);
     }, 1500);
   };
@@ -96,6 +132,22 @@ const Chat = () => {
 
   const handleFileSelect = (index: number) => {
     setActiveFile(index);
+    const fileId = uploadedFiles[index].name;
+    
+    // Initialize chat session for new file if it doesn't exist
+    if (!chatSessions.has(fileId)) {
+      setChatSessions((prev) => {
+        const newSessions = new Map(prev);
+        newSessions.set(fileId, [{
+          id: `welcome-${fileId}`,
+          content: `Hello! I'm ready to help you analyze "${fileId}". Ask me anything about this specific PDF document!`,
+          role: "assistant" as const,
+          timestamp: new Date(),
+        }]);
+        return newSessions;
+      });
+    }
+    
     toast({
       title: "PDF Selected",
       description: `Now analyzing: ${uploadedFiles[index].name}`,
@@ -103,6 +155,15 @@ const Chat = () => {
   };
 
   const handleFileRemove = (index: number) => {
+    const fileToRemove = uploadedFiles[index].name;
+    
+    // Remove the chat session for this file
+    setChatSessions((prev) => {
+      const newSessions = new Map(prev);
+      newSessions.delete(fileToRemove);
+      return newSessions;
+    });
+    
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
     if (activeFile === index) {
       setActiveFile(uploadedFiles.length > 1 ? 0 : null);
@@ -119,6 +180,23 @@ const Chat = () => {
     );
     if (files.length > 0) {
       setUploadedFiles((prev) => [...prev, ...files]);
+      
+      // If no file is active, select the first new file
+      if (activeFile === null) {
+        setActiveFile(uploadedFiles.length);
+        const fileId = files[0].name;
+        setChatSessions((prev) => {
+          const newSessions = new Map(prev);
+          newSessions.set(fileId, [{
+            id: `welcome-${fileId}`,
+            content: `Hello! I'm ready to help you analyze "${fileId}". Ask me anything about this specific PDF document!`,
+            role: "assistant" as const,
+            timestamp: new Date(),
+          }]);
+          return newSessions;
+        });
+      }
+      
       toast({
         title: "Files Added",
         description: `Added ${files.length} PDF${files.length > 1 ? "s" : ""}`,
@@ -202,11 +280,22 @@ const Chat = () => {
         {/* Messages Area */}
         <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
           <div className="max-w-3xl mx-auto space-y-4">
-            {messages.map((message) => (
-              <ChatMessage key={message.id} message={message} />
-            ))}
+            {activeFile === null ? (
+              <div className="text-center text-muted-foreground py-8">
+                <p className="text-lg font-medium mb-2">No PDF Selected</p>
+                <p className="text-sm">Upload and select a PDF to start chatting</p>
+              </div>
+            ) : getCurrentMessages().length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                <p className="text-sm">Start a conversation about {uploadedFiles[activeFile].name}</p>
+              </div>
+            ) : (
+              getCurrentMessages().map((message) => (
+                <ChatMessage key={message.id} message={message} />
+              ))
+            )}
             
-            {isLoading && (
+            {isLoading && activeFile !== null && (
               <div className="flex gap-3 animate-fade-in">
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                   <div className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
