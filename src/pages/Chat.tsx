@@ -28,6 +28,7 @@ interface PDFFile {
   size: number;
   type: string;
   uploadedAt: string;
+  isProcessing?: boolean;
 }
 
 const Chat = () => {
@@ -197,32 +198,63 @@ const Chat = () => {
     );
     
     if (files.length > 0) {
+      // First add files with processing state
+      const processingFiles: PDFFile[] = files.map((file, index) => ({
+        id: `processing-${Date.now()}-${index}`, // Temporary ID
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        uploadedAt: new Date().toISOString(),
+        isProcessing: true
+      }));
+      
+      setUploadedFiles((prev) => [...prev, ...processingFiles]);
+      
+      // If no file is active, select the first new file
+      const shouldSelectFirst = activeFile === null;
+      if (shouldSelectFirst) {
+        setActiveFile(uploadedFiles.length);
+      }
+      
       try {
         // Upload files to backend and get pdf_ids
-        const uploadPromises = files.map(async (file) => {
+        const uploadPromises = files.map(async (file, index) => {
           const response = await uploadPDF(file);
           return {
-            id: response.pdf_id,
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            uploadedAt: new Date().toISOString()
+            tempId: processingFiles[index].id,
+            actualFile: {
+              id: response.pdf_id,
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              uploadedAt: new Date().toISOString(),
+              isProcessing: false
+            }
           };
         });
 
-        const newFiles = await Promise.all(uploadPromises);
-        setUploadedFiles((prev) => [...prev, ...newFiles]);
+        const results = await Promise.all(uploadPromises);
         
-        // If no file is active, select the first new file
-        if (activeFile === null) {
-          setActiveFile(uploadedFiles.length);
-          const pdfId = newFiles[0].id;
-          const fileName = newFiles[0].name;
+        // Update files with actual IDs and remove processing state
+        setUploadedFiles((prev) => {
+          const updated = [...prev];
+          results.forEach(({ tempId, actualFile }) => {
+            const index = updated.findIndex(f => f.id === tempId);
+            if (index !== -1) {
+              updated[index] = actualFile;
+            }
+          });
+          return updated;
+        });
+        
+        // Initialize chat session for the first new file if it was selected
+        if (shouldSelectFirst && results.length > 0) {
+          const firstFile = results[0].actualFile;
           setChatSessions((prev) => {
             const newSessions = new Map(prev);
-            newSessions.set(pdfId, [{
-              id: `welcome-${pdfId}`,
-              content: `Hello! I'm ready to help you analyze "${fileName}". Ask me anything about this specific PDF document!`,
+            newSessions.set(firstFile.id, [{
+              id: `welcome-${firstFile.id}`,
+              content: `Hello! I'm ready to help you analyze "${firstFile.name}". Ask me anything about this specific PDF document!`,
               role: "assistant" as const,
               timestamp: new Date(),
             }]);

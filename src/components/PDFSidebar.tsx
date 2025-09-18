@@ -1,4 +1,4 @@
-import { FileText, Plus, X } from "lucide-react";
+import { FileText, Plus, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,6 +9,7 @@ interface PDFFile {
   size: number;
   type: string;
   uploadedAt: string;
+  isProcessing?: boolean;
 }
 
 interface PDFSidebarProps {
@@ -64,12 +65,19 @@ const PDFSidebar = ({
               )}
             >
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <FileText
-                  size={16}
-                  className={cn(
-                    activeFile === index ? "text-primary" : "text-muted-foreground"
-                  )}
-                />
+                {file.isProcessing ? (
+                  <Loader2
+                    size={16}
+                    className="animate-spin text-primary"
+                  />
+                ) : (
+                  <FileText
+                    size={16}
+                    className={cn(
+                      activeFile === index ? "text-primary" : "text-muted-foreground"
+                    )}
+                  />
+                )}
                 <span
                   className={cn(
                     "text-sm truncate",
@@ -78,17 +86,24 @@ const PDFSidebar = ({
                 >
                   {file.name}
                 </span>
+                {file.isProcessing && (
+                  <span className="text-xs text-muted-foreground ml-auto mr-2">
+                    Processing...
+                  </span>
+                )}
               </div>
               
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onFileRemove(index);
-                }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
-              >
-                <X size={14} className="text-destructive" />
-              </button>
+              {!file.isProcessing && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFileRemove(index);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
+                >
+                  <X size={14} className="text-destructive" />
+                </button>
+              )}
             </div>
           ))}
         </div>
