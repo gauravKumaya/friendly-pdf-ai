@@ -3,24 +3,50 @@ import { useNavigate } from "react-router-dom";
 import Logo from "@/components/Logo";
 import FileUploadZone from "@/components/FileUploadZone";
 import { Sparkles, Zap, Shield } from "lucide-react";
+import { uploadPDF } from "@/services/api";
+import { toast } from "@/hooks/use-toast";
 
 const Landing = () => {
   const navigate = useNavigate();
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleFilesUploaded = (files: File[]) => {
+  const handleFilesUploaded = async (files: File[]) => {
     setIsUploading(true);
-    // Store files in sessionStorage for the chat page
-    const fileData = files.map((file) => ({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    }));
-    sessionStorage.setItem("uploadedFiles", JSON.stringify(fileData));
     
-    setTimeout(() => {
-      navigate("/chat");
-    }, 500);
+    try {
+      // Upload files to backend and get pdf_ids
+      const uploadPromises = files.map(async (file) => {
+        const response = await uploadPDF(file);
+        return {
+          id: response.pdf_id,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          uploadedAt: new Date().toISOString()
+        };
+      });
+
+      const fileData = await Promise.all(uploadPromises);
+      
+      // Store file data with pdf_ids in sessionStorage
+      sessionStorage.setItem("uploadedFiles", JSON.stringify(fileData));
+      
+      toast({
+        title: "Success",
+        description: `${files.length} PDF${files.length > 1 ? 's' : ''} uploaded successfully`,
+      });
+      
+      setTimeout(() => {
+        navigate("/chat");
+      }, 500);
+    } catch (error) {
+      setIsUploading(false);
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload PDFs",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

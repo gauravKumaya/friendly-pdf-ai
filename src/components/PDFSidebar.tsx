@@ -3,8 +3,16 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+interface PDFFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+}
+
 interface PDFSidebarProps {
-  files: File[];
+  files: PDFFile[];
   activeFile: number | null;
   onFileSelect: (index: number) => void;
   onFileRemove: (index: number) => void;
